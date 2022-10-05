@@ -1,0 +1,12 @@
+[
+{
+  "directory": "/home/xin/repo/GitHub/xinyangli/FAT32-Reader/build",
+  "command": "/usr/bin/cc  -I/home/xin/repo/GitHub/xinyangli/FAT32-Reader/include  -o CMakeFiles/fat32-reader.dir/src/io.c.o -c /home/xin/repo/GitHub/xinyangli/FAT32-Reader/src/io.c",
+  "file": "/home/xin/repo/GitHub/xinyangli/FAT32-Reader/src/io.c"
+},
+{
+  "directory": "/home/xin/repo/GitHub/xinyangli/FAT32-Reader/build",
+  "command": "/usr/bin/cc  -I/home/xin/repo/GitHub/xinyangli/FAT32-Reader/include  -o CMakeFiles/fat32-reader.dir/src/main.c.o -c /home/xin/repo/GitHub/xinyangli/FAT32-Reader/src/main.c",
+  "file": "/home/xin/repo/GitHub/xinyangli/FAT32-Reader/src/main.c"
+}
+]
