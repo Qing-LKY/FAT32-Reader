@@ -1,3 +1,10 @@
+# Vscode
+.vscode/
+
+# My temp files
+temp/
+a.img
+
 # Prerequisites
 *.d
 
