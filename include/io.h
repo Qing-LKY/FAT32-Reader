@@ -1,23 +1,21 @@
 #ifndef _FAT_IO_H
 #define _FAT_IO_H
 #include "file.h"
+#include "fat.h"
 
 #define BUF_SIZE 1000000
 
-typedef struct fat_superblock_t {
-    u16 size_per_sector;
-    u8 sectors_per_cluster;
-    u16 reserved_sectors_num;
-    u8 FATs_num;
-    u32 sectors_num;
-    u32 sectors_per_FAT;
-    u32 root_clus;
-} fat_superblock_t;
-
-extern fat_superblock_t fat_superblock;
 extern int img_fd;
 
 int load_disk_image(char *imagepath);
 int load_DBR_info();
 int disp_DBR_info();
+
+// 将 cluster 中的数据读入到 buf 中
+// 需要保证 buf 的可用空间大小大于簇大小
+int read_clus(u32 cluster, u8 *buf);
+
+// 接收簇号，找到该簇号指向的下一个簇
+// 如果出错，返回CLUS_EMPTY, CLUS_RESERVED 或 CLUS_BAD
+u32 fat_next(int clus);
 #endif //_FAT_IO_H
