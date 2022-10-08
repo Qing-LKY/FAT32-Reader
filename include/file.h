@@ -8,6 +8,7 @@
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
+typedef unsigned long u64;
 
 // 把文件 fd 的 addr 偏移的 siz 个字节写入 buf 中
 // 返回 0 表示正常，出错则返回错误信息
