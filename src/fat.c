@@ -2,22 +2,31 @@
 #include "fat.h"
 #include "io.h"
 #include <string.h>
+#include <uchar.h>
 #include <stdio.h>
 #include <stdlib.h>
 
 int fat_parse_entry(fat_entry_t *entry, u8 *buf) {
     entry->attr = *(u8 *)(buf + 0x0B);
     if (entry->attr == ENTRY_ATTR_LFN) {
-        // TODO: 使用 wchar_t 来处理长目录项中的 Unicode 编码
         entry->i_first = 0;
         entry->size = 0;
-        entry->name = (char *)calloc(14, sizeof(char));
-        char * p_name = entry->name;
-        p_name = stpncpy(p_name, (char *)buf + 0x1, 5);
-        p_name = stpncpy(++p_name, (char *)buf + 0xE, 6);
-        p_name = stpncpy(++p_name, (char *)buf + 0x1C, 2);
-        *(++p_name) = '\0';
-        entry->n_len = strnlen(entry->name, 13);
+        entry->name = (char16_t *)calloc(14, sizeof(char16_t));
+
+        memcpy((char16_t *)entry->name, (char16_t *)(buf + 0x1), 10);
+        memcpy((char16_t *)entry->name + 5, (char16_t *)(buf + 0xE), 12);
+        memcpy((char16_t *)entry->name + 11, (char16_t *)(buf + 0x1C), 4);
+
+        char16_t *p_name = entry->name;
+        for (; *p_name != u'\0' && p_name <= (char16_t *)entry->name + 13; p_name++) {
+            ;
+        }
+        if (p_name == (char16_t *)entry->name + 13) {
+            ((char16_t *)entry->name)[13] = u'\0';
+            entry->n_len = 13;
+        } else {
+            entry->n_len = p_name - (char16_t *)entry->name;
+        }
     } else {
         entry->i_first = *(u16 *)(buf + 0x14) << 16 | *(u16 *)(buf + 0x1A);
         entry->name =
@@ -25,7 +34,7 @@ int fat_parse_entry(fat_entry_t *entry, u8 *buf) {
         char *name_end = stpncpy(entry->name, (char *)buf, 8); /* 文件名 */
         char *ext_start = name_end == entry->name ? entry->name : name_end + 1;
         *(ext_start++) = '.';
-        char *ext_end = stpncpy(ext_start, (char *)buf + 0x8, 3); /* 扩展名 */
+        char *ext_end = stpncpy(ext_start, (char *)(buf + 0x8), 3); /* 扩展名 */
         if (ext_end == ext_start) {
             --ext_start;
             --ext_end; /* 空扩展名需要去掉添加的'.' */
@@ -33,7 +42,7 @@ int fat_parse_entry(fat_entry_t *entry, u8 *buf) {
         } else {
             *(ext_end + 1) = '\0';
         }
-        entry->n_len = ext_end - entry->name;
+        entry->n_len = ext_end - (char *)entry->name;
         entry->size = *(u32 *)(buf + 0x1C);
     }
     return 0;

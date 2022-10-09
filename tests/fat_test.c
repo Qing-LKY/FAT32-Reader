@@ -1,5 +1,6 @@
 #include <check.h>
 #include <stdlib.h>
+#include <uchar.h>
 #include "fat.h"
 #include "file.h"
 #include "io.h"
@@ -21,7 +22,6 @@ START_TEST(test_parse_dir) {
 }
 END_TEST
 
-// TODO: 测试长目录项解析(Unicode编码)
 START_TEST(test_parse_entry_LFN) {
     unsigned char buf[32] = {
         0x41, 0x74, 0x00, 0x65,
@@ -35,6 +35,7 @@ START_TEST(test_parse_entry_LFN) {
     };
     fat_entry_t entry;
     fat_parse_entry(&entry, buf);
+    ck_assert_mem_eq(entry.name, u"textDir1", (entry.n_len + 1) * 2);
 }
 
 Suite * suite_fat(void) {
@@ -45,6 +46,9 @@ Suite * suite_fat(void) {
     tcase_add_test(tc_parse_dir, test_parse_dir);
     suite_add_tcase(s, tc_parse_dir);
 
+    TCase *tc_parse_entry_LFN = tcase_create("fat_parse_entry_LFN");
+    tcase_add_test(tc_parse_entry_LFN, test_parse_entry_LFN);
+    suite_add_tcase(s, tc_parse_entry_LFN);
     return s;
 }
 

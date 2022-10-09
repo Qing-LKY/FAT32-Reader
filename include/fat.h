@@ -24,7 +24,8 @@ extern fat_superblock_t fat_superblock;
 
 // 数据区目录项结构
 typedef struct fat_entry_t {
-    char *name;  /* */
+    void *name;  /* 类型取决于是否为长文件目录项 */
+                 /* 为char* 或 char16_t* */
     int n_len;   /* name 的长度 */
     u8 attr;     /* 从目录项中直接读取的属性 */
     u32 i_first; /* 文件/目录起始簇号 */
