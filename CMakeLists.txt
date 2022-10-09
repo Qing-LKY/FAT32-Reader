@@ -2,10 +2,12 @@ project(fat32-reader)
 
 cmake_minimum_required(VERSION 2.9)
 
-include_directories("include")
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-add_executable(
-    fat32-reader
-    src/io.c
-    src/main.c
-)
+set_property(GLOBAL PROPERTY C_STANDARD 11)
+
+add_subdirectory(src)
+add_subdirectory(tests)
+
+enable_testing()
+add_test(NAME fat_test COMMAND fat_test)
