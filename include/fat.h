@@ -2,6 +2,7 @@
 #define _FAT_FAT_H
 
 #include "file.h"
+#include "uchar.h"
 
 typedef struct fat_superblock_t {
     u16 size_per_sector;
@@ -24,12 +25,15 @@ extern fat_superblock_t fat_superblock;
 
 // 数据区目录项结构
 typedef struct fat_entry_t {
-    void *name;  /* 类型取决于是否为长文件目录项 */
-                 /* 为char* 或 char16_t* */
-    int n_len;   /* name 的长度 */
-    u8 attr;     /* 从目录项中直接读取的属性 */
-    u32 i_first; /* 文件/目录起始簇号 */
-    u32 size;    /* 文件大小 */
+    char *name; /* 短目录项名 或 长目录项名 */
+    int n_len;  /* name 的长度，通过n_len大小可以判断是长文件名还是短文件名 */
+    u8 attr;    /* 从目录项中直接读取的属性 */
+    union {
+        /* 短目录项中文件/目录起始簇号，长目录项中序数项 */
+        u32 i_first;
+        u8 ordinal;
+    };
+    u32 size; /* 文件大小 */
 } fat_entry_t;
 
 #define ENTRY_SIZE 0x20
