@@ -38,6 +38,7 @@ typedef struct fat_entry_t {
 
 #define ENTRY_SIZE 0x20
 #define ENTRY_ATTR_DIR 0x10U
+#define ENTRY_ATTR_ARC 0x20U
 #define ENTRY_ATTR_LFN 0x0FU
 
 // 解析目录项，将结果存入到entry中
@@ -51,5 +52,15 @@ fat_entry_t *fat_parse_dir(fat_entry_t *e, int *len);
 // 将给定目录项的内容读入buf中，buf内存由调用者管理，size为buf的大小。
 // 出错时返回负数，否则返回有效内容的大小。
 int fat_read_file(fat_entry_t *e, u8 *buf, int size);
+
+// 将目录项 src 复制给 des。des 必须是已经声明了空间的。
+// 主要作用是自动化 name 字符串的深复制。
+void entry_copy(fat_entry_t *des, fat_entry_t *src);
+
+// 释放项数组
+int free_entry_array(fat_entry_t *arr, int n);
+
+// 把 e 对应的文件写入 target_fd 中
+int fat_to_file(fat_entry_t *e, int target_fd);
 
 #endif //_FAT_FAT_H

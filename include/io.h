@@ -2,8 +2,11 @@
 #define _FAT_IO_H
 #include "file.h"
 #include "fat.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-#define BUF_SIZE 1000000
+#define BUF_SIZE (1 << 18)
 
 extern int img_fd;
 
@@ -18,4 +21,11 @@ int read_clus(u32 cluster, u8 *buf);
 // 接收簇号，找到该簇号指向的下一个簇
 // 如果出错，返回CLUS_EMPTY, CLUS_RESERVED 或 CLUS_BAD
 u32 next_clus(u32 clus);
+
+// 在一行中显示字符串 但是不换行
+int print_string(char *s);
+
+// 读入一行字符 返回字符长度
+int readline(char *s, int mxn);
+
 #endif //_FAT_IO_H

@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <string.h>
 
 typedef unsigned char u8;
 typedef unsigned short u16;
@@ -24,4 +25,5 @@ static inline int open_file(int *fd, char *filepath, int oflag) {
     *fd = open(filepath, oflag);
     return *fd == -1 ? errno : 0;
 }
+
 #endif //_FAT_FILE_H

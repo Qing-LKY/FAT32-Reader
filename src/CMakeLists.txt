@@ -4,6 +4,7 @@ set(SOURCE
     fat.c
     io.c
     main.c
+    interact.c
 )
 add_executable(
     fat32-reader

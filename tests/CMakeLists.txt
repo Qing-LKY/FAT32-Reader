@@ -18,9 +18,7 @@ include(CheckTypeSize)
 
 add_executable(fat_test fat_test.c)
 include_directories(${PROJECT_SOURCE_DIR}/include)
-target_link_libraries(fat_test fat32-lib ${CHECK_LIBRARIES} pthread)
-
-file(COPY a.img DESTINATION .)
+target_link_libraries(fat_test fat32-lib ${CHECK_LIBRARIES} pthread m subunit rt)
 
 add_test(NAME fat_test COMMAND fat_test WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 set_tests_properties(fat_test PROPERTIES TIMEOUT 30)

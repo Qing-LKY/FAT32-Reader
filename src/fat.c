@@ -1,9 +1,6 @@
 #define __GNU_SOURCE
 #include "fat.h"
 #include "io.h"
-#include <string.h>
-#include <stdio.h>
-#include <stdlib.h>
 
 int fat_parse_entry(fat_entry_t *entry, u8 *buf) {
     entry->attr = *(u8 *)(buf + 0x0B);
@@ -78,7 +75,7 @@ int fat_merge_lfn(fat_entry_t *head, fat_entry_t *tail) {
 }
 
 fat_entry_t *fat_parse_dir(fat_entry_t *e, int *len) {
-    if (e->attr != 0x20) {
+    if (e->attr != ENTRY_ATTR_DIR) {
         perror("Not a directory");
         return NULL;
     }
@@ -156,4 +153,55 @@ entriesclean:
 bufclean:
     free(buf);
     return entries;
+}
+
+int fat_read_file(fat_entry_t *e, u8 *buf, int size) {
+    if(e->size > size) return -1;
+    fat_superblock_t *sb = &fat_superblock;
+    int clus = e->i_first;
+    int mx_clus = (int)sb->size_per_sector / 4 * (int)sb->sectors_per_FAT;
+    int siz_clus = (int)sb->sectors_per_cluster * (int)sb->size_per_sector;
+    u8 *now = buf;
+    while(clus < mx_clus) {
+        int err = read_clus(clus, now);
+        if(err) return -1;
+        now += siz_clus;
+        clus = next_clus(clus);
+    }
+    return 0;
+}
+
+int fat_to_file(fat_entry_t *e, int target_fd) {
+    if(e->attr != ENTRY_ATTR_ARC) return -1;
+    fat_superblock_t *sb = &fat_superblock;
+    int rest = e->size, clus = e->i_first;
+    int mx_clus = (int)sb->size_per_sector / 4 * (int)sb->sectors_per_FAT;
+    int siz_clus = (int)sb->sectors_per_cluster * (int)sb->size_per_sector;
+    u8 *buf = (u8 *)malloc(siz_clus);
+    int err = 0;
+    while(clus < mx_clus) {
+        int err = read_clus(clus, buf);
+        if(err != 0) break;
+        int sz = rest > siz_clus ? siz_clus : rest;
+        write(target_fd, buf, sz);
+        rest -= sz;
+        clus = next_clus(clus);
+    }
+    free(buf);
+    return err;
+}
+
+int free_entry_array(fat_entry_t *arr, int n) {
+    for(int i = 0; i < n; i++) free(arr[i].name);
+    free(arr);
+    return 0;
+}
+
+void entry_copy(fat_entry_t *des, fat_entry_t *src) {
+    des->attr = src->attr;
+    des->i_first = src->i_first;
+    des->n_len = src->n_len;
+    des->name = (char *)malloc(src->n_len + 1);
+    strcpy(des->name, src->name);
+    des->size = src->size;
 }

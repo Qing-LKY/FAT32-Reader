@@ -59,8 +59,23 @@ int read_clus(u32 cluster, u8 *buf) {
 
 u32 next_clus(u32 cluster) {
     u32 nxt = 0xFFFFFFFFU; /* Next cluster */
-    u8 *p = img_buf + fat_offset + cluster * 4;
-    read_offset(img_fd, fat_offset + cluster * 4, 4, p);
-    nxt = *(u32 *)(p);
+    read_offset(img_fd, fat_offset + cluster * 4, 4, (u8 *)&nxt);
     return nxt;
+}
+
+int print_string(char *s) {
+    while(*s != 0) putchar(*s), s++;
+    return 0;
+}
+
+int readline(char *s, int mxn) {
+    char ch = 32; int n = 0;
+    /* 排除空白字符 */
+    while(ch == 32 || ch == 10) ch = getchar();
+    while(ch != 10) {
+        if(n == mxn - 1) return -1;
+        s[n++] = ch, ch = getchar();
+    }
+    s[n] = 0;
+    return n;
 }
