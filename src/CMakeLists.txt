@@ -10,6 +10,8 @@ add_executable(
     fat32-reader
     ${SOURCE}
 )
+
+target_link_libraries(fat32-reader readline)
 add_library(
     fat32-lib
     ${SOURCE}

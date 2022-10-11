@@ -67,15 +67,3 @@ int print_string(char *s) {
     while(*s != 0) putchar(*s), s++;
     return 0;
 }
-
-int readline(char *s, int mxn) {
-    char ch = 32; int n = 0;
-    /* 排除空白字符 */
-    while(ch == 32 || ch == 10) ch = getchar();
-    while(ch != 10) {
-        if(n == mxn - 1) return -1;
-        s[n++] = ch, ch = getchar();
-    }
-    s[n] = 0;
-    return n;
-}

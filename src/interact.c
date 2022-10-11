@@ -1,3 +1,6 @@
+#include <stdio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 #include "io.h"
 #include "fat.h"
 
@@ -9,9 +12,9 @@ const char *cmd_dump = "dump";
 const char *cmd_exit = "exit";
 
 
-char img_path[BUF_SIZE];
-char file_path[BUF_SIZE];
-char cmd[BUF_SIZE];
+char *img_path;
+char *file_path;
+char *cmd;
 
 fat_superblock_t *sb = &fat_superblock;
 fat_entry_t root, now;
@@ -59,14 +62,8 @@ int print_cwd() {
 
 int interact_load_image() {
     /* 读入磁盘映像的位置 */
-    puts("Input the path of your image: (~/a.img)");
-    fflush(stdin);
-    int n = readline(img_path, BUF_SIZE);
-    // puts(img_path);
-    if(n == -1) {
-        puts("Your file path is too long to read!");
-        return -1;
-    }
+    img_path = readline("Input the path of your image (~/a.img): ");
+    add_history(img_path);
     /* 载入磁盘映像 */
     int err = load_disk_image(img_path);
     if(err != 0) {
@@ -127,15 +124,10 @@ int parse_filepath(char *s, int n) {
 
 int interact_change_path() {
     /* 读入目标文件在磁盘中的目录 */
-    puts("Input the target file path: (/TestDir)");
-    fflush(stdin);
-    int n = readline(file_path, BUF_SIZE);
-    if(n == -1) {
-        puts("Your file path is too long to read!");
-        return -1;
-    }
+    file_path = readline("Input the target file path (/TestDir): ");
+    add_history(file_path);
     /* 解析字符串 寻找目录项 */
-    int err = parse_filepath(file_path, n);
+    int err = parse_filepath(file_path, strlen(file_path));
     if(err == -1) {
         puts("Fail to reach target!");
         return -1;
@@ -163,13 +155,8 @@ int show_files() {
 
 int interact_dump_file() {
     /* 读入目标文件名 */
-    puts("Input the target file in this path: (test.doc)");
-    fflush(stdin);
-    int n = readline(file_path, BUF_SIZE);
-    if(n == -1) {
-        puts("Your file path is too long to read!");
-        return -1;
-    }
+    file_path = readline("Input the target file in this path (test.doc): ");
+    add_history(file_path);
     /* 寻找目标文件 */
     int len, flag = 0;
     fat_entry_t *arr = fat_parse_dir(&now, &len);
@@ -189,13 +176,9 @@ int interact_dump_file() {
     }
     puts("We found the entry!");
     /* 读入备份文件名 */
-    puts("Now tell me what file to write: (~/me.txt)");
-    fflush(stdin);
-    n = readline(file_path, BUF_SIZE);
-    if(n == -1) {
-        puts("Your file path is too long to read!");
-        return -1;
-    }
+    puts("");
+    file_path = readline("Now tell me what file to write (~/me.txt): ");
+    add_history(file_path);
     /* 打开(创建)备份文件 */
     int tar_fd = open(file_path, O_WRONLY | O_CREAT, S_IRWXU);
     if(tar_fd == -1) {
@@ -213,9 +196,14 @@ int interact_dump_file() {
 }
 
 int interact_normal() {
-    fflush(stdin);
-    print_cwd();
-    readline(cmd, BUF_SIZE);
+    if (loaded == 0) {
+        cmd = readline("(FAT) ");
+    } else {
+        char s[30];
+        snprintf(s, 30, "[%s] ", cwd[ccwd - 1]);
+        cmd = readline(s);
+    }
+    add_history(cmd);
     if(strcmp(cmd, cmd_cd) == 0) {
         if(loaded == 0) {
             puts("Please load first!");

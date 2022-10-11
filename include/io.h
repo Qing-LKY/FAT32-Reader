@@ -25,7 +25,4 @@ u32 next_clus(u32 clus);
 // 在一行中显示字符串 但是不换行
 int print_string(char *s);
 
-// 读入一行字符 返回字符长度
-int readline(char *s, int mxn);
-
 #endif //_FAT_IO_H
