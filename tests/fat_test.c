@@ -10,7 +10,7 @@ START_TEST(test_parse_dir) {
     load_disk_image(s);
     load_DBR_info();
     fat_entry_t root_entry = {
-        .attr = 0x20,
+        .attr = 0x10,
         .i_first = 2,
         .n_len = 1,
         .name = "/",
@@ -21,7 +21,7 @@ START_TEST(test_parse_dir) {
     for (int i = 0; i < len; i++) {
         printf("%s\n", entries[i].name);
     }
-    //ck_assert_msg(len == 4, "len == 4 failed, len=%d", len);
+    ck_assert_msg(len == 4, "len == 4 failed, len=%d", len);
 }
 END_TEST
 
