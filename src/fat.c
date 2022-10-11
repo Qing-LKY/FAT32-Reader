@@ -23,6 +23,17 @@ int fat_parse_entry(fat_entry_t *entry, u8 *buf) {
         entry->i_first = *(u16 *)(buf + 0x14) << 16 | *(u16 *)(buf + 0x1A);
         entry->name =
             (char *)calloc(13, sizeof(char)); /* 文件名(8)+.+扩展名(3)+'\0' */
+        /* 去掉文件名和扩展名后面的空格 */
+        int i = 7;
+        for (; i >= 0; i--) {
+            if(buf[i] == 32) buf[i] = 0;
+            else break; 
+        }
+        i = 10;
+        for(; i > 7; i--) {
+            if(buf[i] == 32) buf[i] = 0;
+            else break;
+        }
         char *name_end = stpncpy(entry->name, (char *)buf, 8); /* 文件名 */
         char *ext_start = name_end == entry->name ? entry->name : name_end + 1;
         *(ext_start++) = '.';
@@ -76,7 +87,7 @@ int fat_merge_lfn(fat_entry_t *head, fat_entry_t *tail) {
 }
 
 fat_entry_t *fat_parse_dir(fat_entry_t *e, int *len) {
-    if (e->attr != ENTRY_ATTR_DIR) {
+    if ((e->attr & ENTRY_ATTR_DIR) == 0) {
         perror("Not a directory");
         return NULL;
     }
@@ -173,7 +184,7 @@ int fat_read_file(fat_entry_t *e, u8 *buf, int size) {
 }
 
 int fat_to_file(fat_entry_t *e, int target_fd) {
-    if(e->attr != ENTRY_ATTR_ARC) return -1;
+    if((e->attr & ENTRY_ATTR_ARC) == 0) return -1;
     fat_superblock_t *sb = &fat_superblock;
     int rest = e->size, clus = e->i_first;
     int mx_clus = (int)sb->size_per_sector / 4 * (int)sb->sectors_per_FAT;

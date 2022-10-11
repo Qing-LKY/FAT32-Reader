@@ -33,9 +33,12 @@ int roll_back_cwd() {
     return 0;
 }
 
-int next_cwd(char *name, int n) {
+int next_cwd(char *name) {
+    int n = strlen(name);
     if(n == 2 && name[0] == '.' && name[1] == '.') {
         roll_back_cwd();
+    } else if(n == 1 && name[0] == '.') {
+        /* do nothing */
     } else {
         cwd[ccwd] = (char *)malloc(n + 1);
         memcpy(cwd[ccwd], name, n + 1);
@@ -59,7 +62,7 @@ int print_cwd() {
 
 int interact_load_image() {
     /* 读入磁盘映像的位置 */
-    puts("Input the path of your image: (~/a.img)");
+    puts("Input the path of your image: (/home/myLinux/a.img)");
     fflush(stdin);
     int n = readline(img_path, BUF_SIZE);
     // puts(img_path);
@@ -93,24 +96,24 @@ int interact_load_image() {
 int parse_filepath(char *s, int n) {
     int l = 1, r = 1;
     if(s[0] != '/') l = r = 0;
-    else now = root;
+    else now = root, reset_cwd();
     while(l < n) {
         /* 解析出当前目录下的目录项 */
         int len;
         fat_entry_t *arr = fat_parse_dir(&now, &len);
         /* s[l...r-1] 是目标目录的名字 */
-        while(r < len && s[r] != '/') r++;
+        while(r < n && s[r] != '/') r++;
         /* 尝试寻找 */
         u8 attr = ENTRY_ATTR_DIR;
         s[r] = 0;
         int flag = 0;
         for(int i = 0; i < len; i++) {
-            if(arr[i].attr == attr && strcmp(s + l, arr[i].name) == 0) {
+            if((arr[i].attr & attr) && strcmp(s + l, arr[i].name) == 0) {
                 flag = 1;
                 free(now.name);
                 entry_copy(&now, arr + i); /* 找到后，将 now 移动过去 */
                 if(now.i_first == 0) now.i_first = sb->root_clus;
-                next_cwd(now.name, now.n_len); /* 更新 cwd */
+                next_cwd(now.name); /* 更新 cwd */
                 break;
             }
         }
@@ -146,14 +149,14 @@ int interact_change_path() {
 
 // 显示这个文件夹的信息
 int show_files() {
-    if(now.attr != ENTRY_ATTR_DIR) {
+    if((now.attr & ENTRY_ATTR_DIR) == 0) {
         puts("Not a directory! Maybe you are going to dump it?");
         return -1;
     }
     int len;
     fat_entry_t *arr = fat_parse_dir(&now, &len);
     for(int i = 0; i < len; i++) {
-        if(arr[i].attr == ENTRY_ATTR_DIR) printf("Dir: ");
+        if(arr[i].attr & ENTRY_ATTR_DIR) printf("Dir: ");
         else printf("File: ");
         print_string(arr[i].name);
         puts("");
@@ -175,7 +178,7 @@ int interact_dump_file() {
     fat_entry_t *arr = fat_parse_dir(&now, &len);
     fat_entry_t tar;
     for(int i = 0; i < len; i++) {
-        if(arr[i].attr == ENTRY_ATTR_DIR) continue;
+        if(arr[i].attr & ENTRY_ATTR_DIR) continue;
         if(strcmp(arr[i].name, file_path) == 0) {
             flag = 1;
             entry_copy(&tar, arr + i); /* 保存找到的项 */
@@ -189,7 +192,7 @@ int interact_dump_file() {
     }
     puts("We found the entry!");
     /* 读入备份文件名 */
-    puts("Now tell me what file to write: (~/me.txt)");
+    puts("Now tell me what file to write: (/home/myLinux/me.txt)");
     fflush(stdin);
     n = readline(file_path, BUF_SIZE);
     if(n == -1) {
