@@ -16,7 +16,7 @@ include(CheckSymbolExists)
 include(CheckTypeSize)
 
 
-add_executable(fat_test fat_test.c)
+add_executable(fat_test EXCLUDE_FROM_ALL fat_test.c)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(fat_test fat32-lib ${CHECK_LIBRARIES} pthread m rt)
 
