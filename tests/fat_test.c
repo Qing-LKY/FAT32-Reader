@@ -40,6 +40,12 @@ START_TEST(test_parse_entry_LFN) {
     fat_parse_entry(&entry, buf);
     ck_assert_mem_eq(entry.name, u8"textDir1", entry.n_len + 1);
 }
+END_TEST
+
+START_TEST(test_merge_lfn) {
+
+}
+END_TEST
 
 Suite * suite_fat(void) {
     Suite *s;

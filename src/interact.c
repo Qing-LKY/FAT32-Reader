@@ -202,8 +202,8 @@ int interact_normal() {
     if (loaded == 0) {
         cmd = readline("(FAT) ");
     } else {
-        char s[30];
-        snprintf(s, 30, "[%s] ", cwd[ccwd - 1]);
+        char s[40];
+        snprintf(s, 40, "[%20s:%s] ", img_path, cwd[ccwd - 1]);
         cmd = readline(s);
     }
     add_history(cmd);

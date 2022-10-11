@@ -54,7 +54,7 @@ make
 ```bash
 mkdir -p build && cd build
 cmake ../
-make && ctest -V
+make fat_test && ctest -V
 ```
 
 ## 后续计划
