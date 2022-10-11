@@ -4,6 +4,7 @@
 
 int fat_parse_entry(fat_entry_t *entry, u8 *buf) {
     entry->attr = *(u8 *)(buf + 0x0B);
+    if (buf[0] == 0xE5) return -1;
     if (entry->attr == ENTRY_ATTR_LFN) {
         entry->size = 0;
         entry->ordinal = buf[0];
@@ -47,7 +48,7 @@ int fat_merge_lfn(fat_entry_t *head, fat_entry_t *tail) {
         // 第7位为1
         return -1;
 
-    u8 i_lfn = head->ordinal & ~(0b1000000);
+    u8 i_lfn = 1;
     int n_len = 0;
     for (fat_entry_t *p = head;; p++) {
         n_len += p->n_len;
@@ -57,15 +58,15 @@ int fat_merge_lfn(fat_entry_t *head, fat_entry_t *tail) {
     name[0] = '\0';
 
     char *p_name = name;
-    for (fat_entry_t *p = head;; p++) {
+    for (fat_entry_t *p = tail;; p--) {
         if ((p->ordinal & i_lfn) != i_lfn)
-            // 长目录项序号未连续递减
+            // 长目录项序号未连续递增
             return -1;
         strncat(name, p->name, p->n_len);
         free(p->name);
         p_name += p->n_len;
-        --i_lfn;
-        if (p == tail) break;
+        ++i_lfn;
+        if (p == head) break;
     }
     *(++p_name) = u'\0';
 
@@ -103,8 +104,8 @@ fat_entry_t *fat_parse_dir(fat_entry_t *e, int *len) {
         // parse entries in the cluster
         entry_buf = buf;
         for (int i = 0; i < entries_per_cluster; i++) {
-            fat_parse_entry(&entries[i_entry], entry_buf);
-            if (entries[i_entry].n_len != 0) {
+            int ret = fat_parse_entry(&entries[i_entry], entry_buf);
+            if (ret == 0 && entries[i_entry].n_len != 0) {
                 // 去除空项
                 if (entries[i_entry].attr == ENTRY_ATTR_LFN) {
                     if (entries[i_entry].ordinal & 0b1000000)
@@ -112,7 +113,7 @@ fat_entry_t *fat_parse_dir(fat_entry_t *e, int *len) {
                     if (entries[i_entry].ordinal == 1 ||
                         entries[i_entry].ordinal == 0b1000001) {
                         // 长目录项的最后一项
-                        if (fat_merge_lfn(entries + i_first_lfn, entries + i)) {
+                        if (fat_merge_lfn(entries + i_first_lfn, entries + i_entry)) {
                             i_entry = i_first_lfn - 1;
                         } else {
                             i_entry = i_first_lfn;
