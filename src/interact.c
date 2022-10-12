@@ -13,6 +13,7 @@ const char *cmd_exit = "exit";
 const char *cmd_cwd = "cwd";
 
 char *img_path;
+char *short_img_path;
 char *file_path;
 char *cmd;
 
@@ -76,6 +77,11 @@ int interact_load_image() {
         printf("You got an error (no.%d) when reading DBR!\n", err);
         return -1;
     }
+    /* 提取短文件名用于显示 */
+    char *p = img_path + strlen(img_path) - 1;
+    while(p != img_path && *p != '/') p--;
+    short_img_path = *p == '/' ? p + 1 : p;
+    /* 重置指针 */
     fat_entry_t tmp = {
         .name = NULL,
         .attr = ENTRY_ATTR_DIR,
@@ -177,7 +183,7 @@ int interact_dump_file() {
     }
     puts("We found the entry!");
     /* 读入备份文件名 */
-    puts("");
+    // puts("");
     file_path = readline("Now tell me what file to write (/home/me/a.txt): ");
     add_history(file_path);
     /* 打开(创建)备份文件 */
@@ -201,7 +207,7 @@ int interact_normal() {
         cmd = readline("(FAT) ");
     } else {
         char s[40];
-        snprintf(s, 40, "[%20s:%s] ", img_path, cwd[ccwd - 1]);
+        snprintf(s, 40, "[%s:%s] ", short_img_path, cwd[ccwd - 1]);
         cmd = readline(s);
     }
     add_history(cmd);
