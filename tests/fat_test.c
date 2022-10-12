@@ -73,7 +73,7 @@ START_TEST(test_DBR_info) {
     ck_assert(fat_superblock.root_clus == 2);
     ck_assert(fat_superblock.size_per_sector == 512);
     ck_assert(fat_superblock.sectors_per_cluster == 1);
-    ck_assert(fat_superblock.reserved_sectors_num == 1);
+    ck_assert(fat_superblock.reserved_sectors_num == 32);
     ck_assert(fat_superblock.FATs_num == 2);
     ck_assert(fat_superblock.sectors_num == 81920);
     ck_assert(fat_superblock.sectors_per_FAT == 630);
