@@ -65,9 +65,112 @@
 ![跳转扇区1](asset/winhex/winhex8.png)
 ![跳转扇区2](asset/winhex/winhex9.png)
 
+记录根目录中重要字段。
 
+![文件目录项](asset/winhex/winhex10.png)
+![高十六位](asset/winhex/winhex11.png)
+![低十六位](asset/winhex/winhex12.png)
+![文件长度](asset/winhex/winhex13.png)
+
+得到 FAT1 的起始扇区号为 206。
+
+跳转至 FAT1。
+
+![FAT1](asset/winhex/winhex14.png)
+
+可知文件首簇号为 5，文件簇链为：
+
+![簇链](asset/winhex/winhex15.png)
+
+偏移为 8216。跳转至该文件：、
+
+![文件位置](asset/winhex/winhex16.png)
+![内容](asset/winhex/winhex17.png)
+
+由上可知该文件大小为11770，选中文件且复制该内容至新文件。
+
+![内容](asset/winhex/winhex18.png)
+
+对比可发现文件完全相同。
+
+![对比](asset/winhex/winhex19.png)
 
 ### Linux 下的人工解析
+
+实验环境：
+- Ubuntu 20.04.5 LTS (GNU/Linux 5.4.0-126-generic x86_64)  
+- 实验工具：
+  - mkfs.fat 4.1 (2017-01-24)
+  - hexdump
+
+Linux 下进行实验，是利用 Linux 下一切皆文件的特性，创建磁盘映像并格式化后，利用 loop 设备挂载写入，然后使用 hexdump 分析磁盘的二进制内容。
+
+具体的操作如下：
+
+- 利用 zero 设备或 bximage 创建磁盘映像。
+
+```bash
+bximage -func=create -fd=40M -q myDisk.img
+dd if=/dev/zero of=myDisk.img bs=1M count=40
+```
+
+> 关于如何在 Linux 上创建一个拥有文件系统甚至分区的磁盘映像，我总结在了这篇博客里：[use-disk-image-for-fslab](https://qing-lky.github.io/2022/09/28/use-disk-image-for-fslab/)。此处我们只研究 FAT32 文件系统，因此不进行分区。
+
+- 使用 `mkfs` 进行磁盘格式化。它要求磁盘至少有 65525 个簇。这也是前面选择 40Mb 作为磁盘大小的原因。
+
+```bash
+mkfs.fat -F32 myDisk.img
+```
+
+- 挂载磁盘并写入文件。
+
+```bash
+mount -o loop myDisk.img /mnt/myhd
+```
+
+- 使用 hexdump 导出信息，然后使用文本编辑器来阅读。
+
+```bash
+hexdump -C myDisk.img > dump.txt
+```
+
+- 解析过程：
+
+  目标文件：/testDir1/test.doc
+
+  阅读 BPB，计算关键信息：
+
+  ![BPB info](asset/linux/%E9%98%85%E8%AF%BB1.png)
+
+  找到并分析 testDir1 目录项：
+
+  ![Dir info](asset/linux/%E9%98%85%E8%AF%BB2.png)
+
+  分析 test.doc 目录项，找到簇链和文件内容：
+
+  ![File info](asset/linux/%E9%98%85%E8%AF%BB3.png)
+
+### Linux 目录项的特殊性
+
+  > 由于后续的项目我们将在 Linux 下实现。因此此处特开一节，介绍 Linux 下的 FAT32 与 Windows 下的区别。
+
+  在实践中，我们注意到，Linux 对 FAT32 中文长文件名的解析规则与 Windows 下不同。
+
+  Windows 下，中文在 LFN 中会被编码为 UTF-16，但在 Linux 下，它的编码方式较为简单。在下图中，我们编程输出了某个中文长文件名的 16 进制编码（默认使用的是 UTF-8 编码），并和磁盘二进制文件名中的 LFN 进行对比。
+
+  ![Chinese LFN](asset/linux/%E9%98%85%E8%AF%BB4.png)
+
+  不难发现，Linux 直接将 UTF-8 编码的文件名按字节拆开，并直接在高位补充 0 填充为两个字节。
+
+  在后续的编程中，我们使用的也是这种解析方式。尽管我们实际上也实现了 UTF-16 的解码，但由于测试困难等原因，最终的成品项目中，我们的中文编码方式依然是 UTF-8，并没有对 UTF-16 的中文文件名提供支持。
+
+  除此之外，我们还注意到了一些有趣的细节。在 Linux 下，除了 `.` 和 `..` 外，无论文件名有多短，系统都会为之分配至少一个 LFN。
+
+  ![只有一个字符的文件名](asset/linux/%E9%98%85%E8%AF%BB5.png)
+
+  我们推测，这可能与短文件目录项文件名部分的空白填充方式有关。Linux 支持在文件名中使用空格，而短文件名的 11 个字节中，对多余字节的处理也是填充空格，这可能产生解析上的歧义。因此，出于准确和方便的考虑，Linux 为每个文件都分配了 LFN。
+
+  当然，在后续的编程实现中，我们还是针对短目录项的末尾空格进行了排除处理，以兼容 Windows 下磁盘映像中的短目录项。
 
 ## 内容二：编程解析 FAT32 文件系统
 
