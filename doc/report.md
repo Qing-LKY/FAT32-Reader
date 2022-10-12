@@ -185,7 +185,9 @@ hexdump -C myDisk.img > dump.txt
 
 #### 项目简介
 
-本项目针对 Linux 开发，主要功能为解析 FAT32 格式的磁盘文件中的数据，已经在 [GitHub](https://www.github.com/Qing-LKY/FAT32-Reader) 上开源。已经实现的主要功能有：
+本项目针对 Linux 开发，主要功能为解析 FAT32 格式的磁盘文件中的数据。我们的 GitHub 仓库链接是：[https://www.github.com/Qing-LKY/FAT32-Reader](https://www.github.com/Qing-LKY/FAT32-Reader)。
+
+已经实现的主要功能有：
 
 - 文件系统功能
   - [x] 使用 `ls` 和 `cd` 浏览文件系统
@@ -301,6 +303,8 @@ make && make install
 
 编译后在 `build/bin/` 下得到可执行的 `fat32-reader`。
 
+在 cmake 时添加选项 `-DSHOW_CLUSTER=1`，就可以在 dump 时输出文件所包含的簇链
+
 ##### 使用说明
 
 运行后，会看到提示前缀 `[ImagePath:FilePath]$ `。ImagePath 是现在所加载的磁盘文件名，FilePath 是当前所处的文件夹名。
@@ -308,6 +312,7 @@ make && make install
 你可以通过输入来与程序交互：
 
 - 输入 `load`，会进入加载磁盘映像的引导
+- 输入 `disk`，可以显示 FAT32 文件系统的 DBR 信息
 - 输入 `exit`，可以退出程序
 - 输入 `cwd`，可以显示完整的当前位置
 - 输入 `ls`，可以显示当前位置下的文件和文件夹
@@ -330,13 +335,27 @@ make && make install
 
 ![运行效果2](asset/run/cwd.png)
 
+使用 `disk` 可以查看载入的 FAT32 文件系统的 DBR 信息。
+
+![运行效果3](asset/run/disk.png)
+
 使用 `dump` 可以导出文件。
 
-![运行效果3](asset/run/dump.png)
+![运行效果4](asset/run/dump.png)
 
 我们导出的文件内容，与真实文件的内容是完全一致的。
 
 ![比较结果](asset/run/cmp.png)
+
+在撰写实验报告时，我们注意到任务要求中有“输出簇链”这一要求。注意到这个要求后，我们在文件导出的时候加上了对簇号的输出，来完成这个任务。并有了下面的截图：
+
+![输出簇链](asset/run/clusters.png)
+
+出于美观考虑，输出簇链的代码在平时是关闭的。只有在定义了 `SHOW_CLUSTER` 这个宏时才会启用。在 fat.h 中添加一行才会启用这一功能：
+
+```c
+#define SHOW_CLUSTER
+```
 
 ### 代码解析
 
@@ -376,7 +395,9 @@ static inline int read_offset(int fd, off_t addr, size_t siz, u8 *buf) {
 }
 ```
 
-DBR 在我们载入的 FAT32 分区的起始部分，BPB 的大小为 512 个字节。因此我们把磁盘偏移 0 处的 512 个字节读入缓冲区中。接下来，我们依次解析 BPB 中包含的信息，存储到一个结构体中。
+DBR 在我们载入的 FAT32 分区的起始部分，BPB 的大小为 512 个字节。因此我们把磁盘偏移 0 处的 512 个字节读入缓冲区中。接下来，依据下表，依次解析 BPB 中包含的信息，存储到一个结构体中。
+
+![BPB info](asset/ppt_pbp.png)
 
 这个结构体被定义在 fat.h 中。
 
@@ -398,9 +419,11 @@ extern fat_superblock_t fat_superblock;
 
 #### 簇链获取
 
-追踪簇链的方式非常简单，读取相应偏移处的值即可得到下一簇的位置，簇号不在合法范围内（0xFFFFFFFF）时，簇链就获取完成了。
+获取簇链的方式非常简单，读取相应偏移处的值即可得到下一簇的位置，簇号不在合法范围内时，簇链就获取完成了。
 
-获取簇链的过程在我们解析目录和文件的时候一直有出现
+> “不在合法范围内” 这个描述可能有些粗暴，但对于编程而言足够了。更准确的说，是 `(cluster & 0x0FFFFFFF) == 0x0FFFFFFF`。
+
+下面的函数定义在 io.h 中，传入簇号，输出下一个簇的簇号。
 
 ```c
 u32 next_clus(u32 cluster) {
@@ -410,18 +433,185 @@ u32 next_clus(u32 cluster) {
 }
 ```
 
+获取簇链的过程在我们解析目录和文件的时候一直有出现，就是一个简单的 while 循环。
+
+```c
+while(clus < mx_clus) {
+  do_something...
+  clus = next_clus(clus);
+}
+```
+
 #### 目录项解析
-
-
 
 #### 文件导出
 
+文件导出实现在 `fat.c` 中。重要的函数如下：
+
+```c
+int fat_to_file(fat_entry_t *e, int target_fd) {
+    if((e->attr & ENTRY_ATTR_ARC) == 0) return -1;
+    fat_superblock_t *sb = &fat_superblock;
+    int rest = e->size, clus = e->i_first;
+    int mx_clus = (int)sb->size_per_sector / 4 * (int)sb->sectors_per_FAT;
+    int siz_clus = (int)sb->sectors_per_cluster * (int)sb->size_per_sector;
+    u8 *buf = (u8 *)malloc(siz_clus);
+    int err = 0;
+    while(clus < mx_clus) {
+        int err = read_clus(clus, buf);
+        if(err != 0) break;
+        int sz = rest > siz_clus ? siz_clus : rest;
+        write(target_fd, buf, sz);
+        rest -= sz;
+        clus = next_clus(clus);
+    }
+    free(buf);
+    return err;
+}
+```
+
+它会查找该目录项的簇链，将簇号对应的数据簇读入 buf，写入文件中。
+
+我们根据 FAT 表的大小计算了 `mx_clus` 来表示簇的最大簇号，用于簇链结束的判断。这一判断也可以改成前面提到的 `(cluster & 0x0FFFFFFF) == 0x0FFFFFFF`。
+
+我们还计算了每个簇的大小 `siz_clus`，并结合目录项中记录的文件大小，来保证不会往文件中写入多余内容。
+
 #### 用户交互
+
+用户交互部分的代码在 interact.c 中。主要用于引导、读取用户输入。
+
+在这一部分中，我们引入了 readline 库来引导用户输入。这使得我们的交互界面支持光标的左右移动和历史记录。
+
+此外，这部分中也有一些比较关键的代码。
+
+##### 对 cd 的支持
+
+```c
+int parse_filepath(char *s, int n) {
+    int l = 1, r = 1;
+    if(s[0] != '/') l = r = 0;
+    else now = root, reset_cwd();
+    while(l < n) {
+        /* 解析出当前目录下的目录项 */
+        int len;
+        fat_entry_t *arr = fat_parse_dir(&now, &len);
+        /* s[l...r-1] 是目标目录的名字 */
+        while(r < n && s[r] != '/') r++;
+        /* 尝试寻找 */
+        u8 attr = ENTRY_ATTR_DIR;
+        s[r] = 0;
+        int flag = 0;
+        for(int i = 0; i < len; i++) {
+            if((arr[i].attr & attr) && strcmp(s + l, arr[i].name) == 0) {
+                flag = 1;
+                free(now.name);
+                entry_copy(&now, arr + i); /* 找到后，将 now 移动过去 */
+                if(now.i_first == 0) now.i_first = sb->root_clus;
+                next_cwd(now.name); /* 更新 cwd */
+                break;
+            }
+        }
+        /* free array */
+        free_entry_array(arr, len);
+        if(!flag) {
+            printf("Dir %s not found!\n", s + l);
+            return -1;
+        }
+        l = r + 1, r = l;
+    }
+    return 0;
+}
+```
+
+在 interact.c 中，为了支持相对路径，我们定义了一个 `fat_entry_t` 结构体 `now`，来存储当前所在路径的目录项的相关信息。它同时，也是个指向当前所在位置的“指针”。
+
+在上面的代码中，将字符串中的 `/` 作为分界，将输入解析成一级一级的目录，同时移动当前位置的“指针”。通过前面介绍的 `fat_parse_dir` 获取当前 目录下的所有目录项，然后一一进行名字比对，找到目标后修改指针，并调用 `next_cwd` 来更新 cwd 的显示字符串。
+
+##### 对 cwd 的支持
+
+cwd 的显示和维护主要由下面的代码完成：
+
+```c
+char *cwd[BUF_SIZE]; int ccwd;
+
+int reset_cwd() {
+    for(int i = 0; i < ccwd; i++) free(cwd[i]);
+    ccwd = 1;
+    cwd[0] = (char *)malloc(2);
+    cwd[0][0] = '/', cwd[0][1] = 0;
+    return 0;
+}
+
+int roll_back_cwd() {
+    ccwd--;
+    free(cwd[ccwd]);
+    return 0;
+}
+
+int next_cwd(char *name) {
+    int n = strlen(name);
+    if(n == 2 && name[0] == '.' && name[1] == '.') {
+        roll_back_cwd();
+    } else if(n == 1 && name[0] == '.') {
+        /* do nothing */
+    } else {
+        cwd[ccwd] = (char *)malloc(n + 1);
+        memcpy(cwd[ccwd], name, n + 1);
+        ccwd++;
+    }
+    return 0;
+}
+
+int print_cwd() {
+    print_string(img_path);
+    printf(":");
+    for(int i = 1; i < ccwd; i++) {
+        putchar('/');
+        print_string(cwd[i]);
+    }
+    if(ccwd == 1) putchar('/');
+    return 0;
+}
+```
+
+`cwd` 是一个字符串数组，按照级别依次记录当前位置。其中，`reset_cwd` 用于重置当前位置为 root，`next_cwd` 用于分析 cwd 应该产生的变化。与 `roll_back_cwd` 配合，实现了对 `.` 和 `..` 的正确解析。
+
+##### 对 ls 和 dump 的支持
+
+对这两个指令的支持是最简单的，`ls` 通过调用前面定义的 `fat_parse_dir` 就可以轻松的实现。而 `dump` 则引导用户输入后调用 `fat_to_file` 即可。
+
+```c
+int show_files() {
+    if((now.attr & ENTRY_ATTR_DIR) == 0) {
+        puts("Not a directory! Maybe you are going to dump it?");
+        return -1;
+    }
+    int len;
+    fat_entry_t *arr = fat_parse_dir(&now, &len);
+    for(int i = 0; i < len; i++) {
+        if(arr[i].attr & ENTRY_ATTR_DIR) printf("Dir: ");
+        else printf("File: ");
+        print_string(arr[i].name);
+        puts("");
+    }
+    return 0;
+}
+```
+
+#### 内存管理
+
+代码中，我们使用了大量的动态空间用于存放目录项、字符串等。因此，我们编程时格外注意内存的释放。
+
+这一点，主要体现在交互时 cwd 和 now 的维护、fat_entry 数组使用和释放、解析目录项时 LFN 的存储和合并等。
+
+不过，在我们使用 `valgrind --tools=memcheck` 进行测试时，还是发现了不少的内存泄露情况。
+
+由于时间有限，我们无法在报告提交前将所有的内存泄露完全修复。欢迎关注我们 GitHub 仓库的后续更新。
 
 ## 小组分工与贡献说明
 
-李心杨：负责了目录项的解析（目录项信息提取，LFN 合并，簇链跟踪等）和交互的优化。
+李心杨：负责了目录项的解析（目录项信息提取、LFN 合并、目录分析等）、交互的优化和 cmake 的配置。
 
-林锟扬：负责了磁盘加载、文件内容导出和交互部分的主体。
+林锟扬：负责了磁盘加载、文件内容导出和交互部分的主体（对相对路径的支持、cwd 的维护、给用户的提示）。
 
 上官景威：负责了 Windows 下的内容一和部分实验报告。

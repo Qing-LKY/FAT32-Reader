@@ -11,6 +11,7 @@ const char *cmd_load = "load";
 const char *cmd_dump = "dump";
 const char *cmd_exit = "exit";
 const char *cmd_cwd = "cwd";
+const char *cmd_disk = "disk";
 
 char *img_path;
 char *short_img_path;
@@ -249,9 +250,16 @@ int interact_normal() {
         }
         print_cwd(); puts("");
         return 0;
+    } else if(strcmp(cmd, cmd_disk) == 0) {
+        if(!loaded) {
+            puts("Please load first!");
+            return -1;
+        }
+        return disp_DBR_info();
     } else {
         puts("Unknown Command. Following commands is supported:");
         puts("load -- to start a image loading");
+        puts("disk -- to show disk infomation");
         puts("cd -- to start a directory changing");
         puts("cwd -- to show current working directory");
         puts("ls -- to show the files in cwd");
