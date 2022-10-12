@@ -15,10 +15,12 @@ include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(CheckTypeSize)
 
+file(COPY a.img
+     DESTINATION ${PROJECT_BINARY_DIR})
 
 add_executable(fat_test EXCLUDE_FROM_ALL fat_test.c)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 target_link_libraries(fat_test fat32-lib ${CHECK_LIBRARIES} pthread m rt subunit)
 
-add_test(NAME fat_test COMMAND fat_test WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+add_test(NAME fat_test COMMAND fat_test WORKING_DIRECTORY ${PROJECT_BINARY_DIR})
 set_tests_properties(fat_test PROPERTIES TIMEOUT 30)

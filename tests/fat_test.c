@@ -6,7 +6,7 @@
 #include "io.h"
 
 START_TEST(test_parse_dir) {
-    char *s = "/home/xin/repo/GitHub/xinyangli/FAT32-Reader/tests/a.img";
+    char *s = "./a.img";
     load_disk_image(s);
     load_DBR_info();
     fat_entry_t root_entry = {
@@ -64,7 +64,7 @@ Suite * suite_fat(void) {
 START_TEST(test_DBR_info) {
     // TODO: Use relative path instead.
     // Cannot find where a.img should be put though.
-    char *s = "/home/xin/repo/GitHub/xinyangli/FAT32-Reader/tests/a.img";
+    char *s = "./a.img";
     int code;
     code = load_disk_image(s);
     ck_assert(img_fd > 0);
@@ -85,7 +85,7 @@ START_TEST(test_DBR_info) {
 END_TEST
 
 START_TEST(test_next_clus) {
-    char *s = "/home/xin/repo/GitHub/xinyangli/FAT32-Reader/tests/a.img";
+    char *s = "./a.img";
     load_disk_image(s);
     load_DBR_info();
     u32 cluster = 4;
@@ -95,7 +95,7 @@ START_TEST(test_next_clus) {
 END_TEST
 
 START_TEST(test_read_clus) {
-    char *s = "/home/xin/repo/GitHub/xinyangli/FAT32-Reader/tests/a.img";
+    char *s = "./a.img";
     load_disk_image(s);
     load_DBR_info();
     u8 *buf = (u8 *)malloc(fat_superblock.sectors_per_cluster * fat_superblock.size_per_sector);
