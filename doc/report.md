@@ -340,15 +340,88 @@ make && make install
 
 ### 代码解析
 
-- 关键量计算
+#### DBR 信息加载
 
-- 目录项解析
+主要定义在 io.c 和 io.h 中。关键代码如下：
 
-- 簇链追踪
+```c
+int load_DBR_info() {
+    static int err;
+    fat_superblock_t *sb = &fat_superblock;
+    err = read_offset(img_fd, 0, 0x200, img_buf);
+    if (err) return err;
+    sb->size_per_sector = *(u16 *)(img_buf + 0x0B);
+    sb->sectors_per_cluster = *(u8 *)(img_buf + 0x0D);
+    sb->reserved_sectors_num = *(u16 *)(img_buf + 0x0E);
+    sb->FATs_num = *(u8 *)(img_buf + 0x10);
+    sb->sectors_num = *(u32 *)(img_buf + 0x20);
+    sb->sectors_per_FAT = *(u32 *)(img_buf + 0x24);
+    sb->root_clus = *(u32 *)(img_buf + 0x2C);
+    fat_offset = sb->reserved_sectors_num * sb->size_per_sector;
+    data_offset =
+        fat_offset + (sb->FATs_num * sb->sectors_per_FAT -
+                      2 * sb->sectors_per_cluster) * /* 簇编号从2开始 */
+                         sb->size_per_sector;
+    return 0;
+}
+```
 
-- 文件导出
+在代码中，我们先调用 `read_offset` 函数。它被定义在 `file.h` 中，用于从文件中读取某个偏移处的内容到缓冲区中。它的定义如下：
 
-- 用户交互
+```c
+static inline int read_offset(int fd, off_t addr, size_t siz, u8 *buf) {
+    if(lseek(fd, addr, SEEK_SET) == -1) return errno;
+    if(read(fd, buf, siz) == -1) return errno;
+    return 0;
+}
+```
+
+DBR 在我们载入的 FAT32 分区的起始部分，BPB 的大小为 512 个字节。因此我们把磁盘偏移 0 处的 512 个字节读入缓冲区中。接下来，我们依次解析 BPB 中包含的信息，存储到一个结构体中。
+
+这个结构体被定义在 fat.h 中。
+
+```c
+typedef struct fat_superblock_t {
+    u16 size_per_sector;
+    u8 sectors_per_cluster;
+    u16 reserved_sectors_num;
+    u8 FATs_num;
+    u32 sectors_num;
+    u32 sectors_per_FAT;
+    u32 root_clus;
+} fat_superblock_t;
+
+extern fat_superblock_t fat_superblock;
+```
+
+除此之外，函数还顺便计算出了数据部分和 FAT 表的偏移量，保存在环境变量中方便后续的解析调用。
+
+#### 簇链获取
+
+追踪簇链的方式非常简单，读取相应偏移处的值即可得到下一簇的位置，簇号不在合法范围内（0xFFFFFFFF）时，簇链就获取完成了。
+
+获取簇链的过程在我们解析目录和文件的时候一直有出现
+
+```c
+u32 next_clus(u32 cluster) {
+    u32 nxt = 0xFFFFFFFFU; /* Next cluster */
+    read_offset(img_fd, fat_offset + cluster * 4, 4, (u8 *)&nxt);
+    return nxt;
+}
+```
+
+#### 目录项解析
+
+
+
+#### 文件导出
+
+#### 用户交互
 
 ## 小组分工与贡献说明
 
+李心杨：负责了目录项的解析（目录项信息提取，LFN 合并，簇链跟踪等）和交互的优化。
+
+林锟扬：负责了磁盘加载、文件内容导出和交互部分的主体。
+
+上官景威：负责了 Windows 下的内容一和部分实验报告。
