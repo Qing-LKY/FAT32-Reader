@@ -190,15 +190,26 @@ int fat_to_file(fat_entry_t *e, int target_fd) {
     int mx_clus = (int)sb->size_per_sector / 4 * (int)sb->sectors_per_FAT;
     int siz_clus = (int)sb->sectors_per_cluster * (int)sb->size_per_sector;
     u8 *buf = (u8 *)malloc(siz_clus);
-    int err = 0;
+    int err = 0, fir = 1;
+#ifdef SHOW_CLUSTER 
+    printf("Getting cluster: ");
+#endif
     while(clus < mx_clus) {
         int err = read_clus(clus, buf);
         if(err != 0) break;
+#ifdef SHOW_CLUSTER
+        if(fir) printf("%d ", clus), fir = 0;
+        else printf("-> %d ", clus);
+#endif
         int sz = rest > siz_clus ? siz_clus : rest;
-        write(target_fd, buf, sz);
+        err = write(target_fd, buf, sz);
+        if(err != 0) break;
         rest -= sz;
         clus = next_clus(clus);
     }
+#ifdef SHOW_CLUSTER
+    puts("");
+#endif
     free(buf);
     return err;
 }
