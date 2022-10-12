@@ -34,6 +34,8 @@
 
 4. cd 不仅可以输入绝对路径和相对路径，也支持使用 .. 和 .
 
+5. 文件操作时产生的 error number 可以使用 `errno` 指令查看具体含义（需要安装 `errno`）
+
 ## 编译
 
 依赖 [libreadline](https://tiswww.case.edu/php/chet/readline/rltop.html)。
