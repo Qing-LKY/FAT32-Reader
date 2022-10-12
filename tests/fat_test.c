@@ -71,16 +71,12 @@ START_TEST(test_DBR_info) {
     ck_assert(code == 0);
     load_DBR_info();
     ck_assert(fat_superblock.root_clus == 2);
-    fat_superblock_t sb = {
-        .size_per_sector = 512,
-        .sectors_per_cluster = 1,
-        .reserved_sectors_num = 32,
-        .FATs_num = 2,
-        .sectors_num = 81920,
-        .sectors_per_FAT = 630,
-        .root_clus = 2,
-    };
-    ck_assert_mem_eq(&fat_superblock, &sb, sizeof(fat_superblock_t));
+    ck_assert(fat_superblock.size_per_sector == 512);
+    ck_assert(fat_superblock.sectors_per_cluster == 1);
+    ck_assert(fat_superblock.reserved_sectors_num == 1);
+    ck_assert(fat_superblock.FATs_num == 2);
+    ck_assert(fat_superblock.sectors_num == 81920);
+    ck_assert(fat_superblock.sectors_per_FAT == 630);
 }
 END_TEST
 
