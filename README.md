@@ -9,12 +9,13 @@
 
 ## 操作指南
 
-运行后，会看到提示前缀 `[ImagePath:FilePath]$ `。ImagePath 是现在所加载的磁盘文件名，FilePath 是当前处在磁盘中的位置。
+运行后，会看到提示前缀 `[ImagePath:FilePath]$ `。ImagePath 是现在所加载的磁盘文件名，FilePath 是当前所处的文件夹名。
 
 你可以通过输入来与程序交互：
 
 - 输入 `load`，会进入加载磁盘映像的引导
 - 输入 `exit`，可以退出程序
+- 输入 `cwd`，可以显示完整的当前位置
 - 输入 `ls`，可以显示当前位置下的文件和文件夹
 - 输入 `dump`，进入导出文件的引导，可以导出一个当前位置下的文件
 - 输入 `cd`，进入切换目录的引导
@@ -37,17 +38,31 @@
 
 依赖 [libreadline](https://tiswww.case.edu/php/chet/readline/rltop.html)。
 
+Ubuntu 下，可以使用下面的指令安装：
+
 ```bash
-mkdir -p build && cd build
-cmake ../
-make
+sudo apt install libreadline-dev
 ```
 
-编译后在 `build` 下得到 `fat32-reader`
+编译方式：
+
+```bash
+mkdir -p build && cd build
+cmake -DCMAKE_BUILD_TYPE=Release ../
+make && make install
+```
+
+编译后在 `build/bin/` 下得到 `fat32-reader`
 
 ## 测试
 
 单元测试依赖 [check](https://libcheck.github.io/check/)
+
+Ubuntu 下，可以使用下面的指令安装：
+
+```bash
+sudo apt install check libsubunit0
+```
 
 测试方法：
 

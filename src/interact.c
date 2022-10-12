@@ -10,7 +10,7 @@ const char *cmd_ls = "ls";
 const char *cmd_load = "load";
 const char *cmd_dump = "dump";
 const char *cmd_exit = "exit";
-
+const char *cmd_cwd = "cwd";
 
 char *img_path;
 char *file_path;
@@ -51,21 +51,19 @@ int next_cwd(char *name) {
 }
 
 int print_cwd() {
-    printf("[");
-    if(loaded) print_string(img_path);
+    print_string(img_path);
     printf(":");
     for(int i = 1; i < ccwd; i++) {
         putchar('/');
         print_string(cwd[i]);
     }
     if(ccwd == 1) putchar('/');
-    printf("]$ ");
     return 0;
 }
 
 int interact_load_image() {
     /* 读入磁盘映像的位置 */
-    img_path = readline("Input the path of your image (~/a.img): ");
+    img_path = readline("Input the path of your image (/home/me/a.img): ");
     add_history(img_path);
     /* 载入磁盘映像 */
     int err = load_disk_image(img_path);
@@ -127,7 +125,7 @@ int parse_filepath(char *s, int n) {
 
 int interact_change_path() {
     /* 读入目标文件在磁盘中的目录 */
-    file_path = readline("Input the target file path (/TestDir): ");
+    file_path = readline("Input the target file path (/dir1): ");
     add_history(file_path);
     /* 解析字符串 寻找目录项 */
     int err = parse_filepath(file_path, strlen(file_path));
@@ -180,7 +178,7 @@ int interact_dump_file() {
     puts("We found the entry!");
     /* 读入备份文件名 */
     puts("");
-    file_path = readline("Now tell me what file to write (~/me.txt): ");
+    file_path = readline("Now tell me what file to write (/home/me/a.txt): ");
     add_history(file_path);
     /* 打开(创建)备份文件 */
     int tar_fd = open(file_path, O_WRONLY | O_CREAT, S_IRWXU);
@@ -238,10 +236,18 @@ int interact_normal() {
         if(loaded) close(img_fd);
         puts("See you next time!");
         exit(0);
+    } else if(strcmp(cmd, cmd_cwd) == 0) {
+        if(!loaded) {
+            puts("Please load first!");
+            return -1;
+        }
+        print_cwd(); puts("");
+        return 0;
     } else {
         puts("Unknown Command. Following commands is supported:");
         puts("load -- to start a image loading");
         puts("cd -- to start a directory changing");
+        puts("cwd -- to show current working directory");
         puts("ls -- to show the files in cwd");
         puts("dump -- to start a file dumping");
         puts("exit -- to exit");
