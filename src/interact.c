@@ -71,11 +71,13 @@ int interact_load_image() {
     int err = load_disk_image(img_path);
     if(err != 0) {
         printf("You got an error (no.%d) when loading image!\n", err);
+        free(img_path);
         return -1;
     }
     err = load_DBR_info();
     if(err != 0) {
         printf("You got an error (no.%d) when reading DBR!\n", err);
+        free(img_path);
         return -1;
     }
     /* 提取短文件名用于显示 */
@@ -92,6 +94,7 @@ int interact_load_image() {
     root = now = tmp;
     reset_cwd(); /* 修改显示的 cwd */
     puts("Load successfully!");
+    free(img_path);
     return 0;
 }
 
@@ -141,6 +144,7 @@ int interact_change_path() {
         return -1;
     }
     puts("Change successfully!");
+    free(file_path);
     return 0;
 }
 
@@ -180,6 +184,7 @@ int interact_dump_file() {
     free_entry_array(arr, len); /* 释放数组 */
     if(flag == 0) {
         puts("File not found!");
+        free(file_path);
         return -1;
     }
     puts("We found the entry!");
@@ -200,6 +205,7 @@ int interact_dump_file() {
         return -1;
     } else close(tar_fd);
     puts("Dump successfully!");
+    free(file_path);
     return 0;
 }
 
@@ -213,24 +219,28 @@ int interact_normal() {
     }
     add_history(cmd);
     if(strcmp(cmd, cmd_cd) == 0) {
+        free(cmd);
         if(loaded == 0) {
             puts("Please load first!");
             return -1;
         }
         return interact_change_path();
     } else if(strcmp(cmd, cmd_ls) == 0) {
+        free(cmd);
         if(loaded == 0) {
             puts("Please load first!");
             return -1;
         }
         return show_files();
     } else if(strcmp(cmd, cmd_dump) == 0) {
+        free(cmd);
         if(loaded == 0) {
             puts("Please load first!");
             return -1;
         }
         return interact_dump_file();
     } else if(strcmp(cmd, cmd_load) == 0) {
+        free(cmd);
         if(loaded) {
             loaded = 0;
             close(img_fd);
@@ -240,10 +250,12 @@ int interact_normal() {
             return 0;
         } else return -1;
     } else if(strcmp(cmd, cmd_exit) == 0) {
+        free(cmd);
         if(loaded) close(img_fd);
         puts("See you next time!");
         exit(0);
     } else if(strcmp(cmd, cmd_cwd) == 0) {
+        free(cmd);
         if(!loaded) {
             puts("Please load first!");
             return -1;
@@ -251,12 +263,14 @@ int interact_normal() {
         print_cwd(); puts("");
         return 0;
     } else if(strcmp(cmd, cmd_disk) == 0) {
+        free(cmd);
         if(!loaded) {
             puts("Please load first!");
             return -1;
         }
         return disp_DBR_info();
     } else {
+        free(cmd);
         puts("Unknown Command. Following commands is supported:");
         puts("load -- to start a image loading");
         puts("disk -- to show disk infomation");
